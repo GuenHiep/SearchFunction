@@ -75,9 +75,9 @@
                         success: function (data) {
                             response($.map(data, function (item) {
                                 return {
-                                    label: item.label + " (" +item.classroom + ")", 
+                                    label: item.label + " (" + item.classroom + ")",
                                     value: item.value,
-                                    classroom: item.classroom
+                                    classroom: item.classroom 
                                 };
                             }));
                         }
@@ -90,6 +90,7 @@
             });
         });
     </script>
+
 
 
 

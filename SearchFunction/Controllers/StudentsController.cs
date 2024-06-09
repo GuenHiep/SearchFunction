@@ -31,20 +31,20 @@ namespace SearchFunction.Controllers
 
             if (!String.IsNullOrEmpty(searchString))
             {
-                students = students.Where(s => s.Name != null && s.Name.Contains(searchString));
+                students = students.Where(s => s.Name.Contains(searchString) || s.Classroom.Name.Contains(searchString));
             }
-
 
             return View(await students.ToListAsync());
         }
+
 
         // GET: Students/Autocomplete
         // Hành động này trả về danh sách sinh viên dưới dạng JSON cho tính năng autocomplete
         public async Task<IActionResult> Autocomplete(string term)
         {
             var students = await _context.Student
-                                 .Include(s => s.Classroom) 
-                                 .Where(s => s.Name.Contains(term))
+                                 .Include(s => s.Classroom)
+                                 .Where(s => s.Name.Contains(term) || s.Classroom.Name.Contains(term))
                                  .Select(s => new {
                                      label = s.Name,
                                      value = s.Name,
@@ -53,6 +53,7 @@ namespace SearchFunction.Controllers
                                  .ToListAsync();
             return Json(students);
         }
+
 
 
         // GET: Students/Details/5
