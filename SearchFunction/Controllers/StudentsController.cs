@@ -19,39 +19,70 @@ namespace SearchFunction.Controllers
         }
 
         // GET: Students
+        // Phương thức để hiển thị trang danh sách sinh viên với tính năng tìm kiếm
         public async Task<IActionResult> Index(string searchString)
         {
+            // Kiểm tra nếu không có dữ liệu Student trong context
             if (_context.Student == null)
             {
                 return Problem("Entity set 'SearchFunctionContext.Student' is null.");
             }
 
+            // Tạo một truy vấn ban đầu lấy tất cả sinh viên cùng với lớp học của họ
             var students = from s in _context.Student.Include(s => s.Classroom)
                            select s;
 
+            // Nếu chuỗi tìm kiếm không rỗng hoặc không null
             if (!String.IsNullOrEmpty(searchString))
             {
-                students = students.Where(s => s.Name.Contains(searchString) || s.Classroom.Name.Contains(searchString));
+                // Lọc danh sách sinh viên theo tên sinh viên hoặc tên lớp học
+                students = students.Where(s => s.Name.Contains(searchString) ||
+                                               s.Classroom.Name.Contains(searchString));
+
+                // Cố gắng chuyển đổi chuỗi tìm kiếm thành giá trị GPA
+                if (double.TryParse(searchString, out double gpa))
+                {
+                    // Nếu thành công, tiếp tục lọc danh sách theo GPA
+                    students = students.Where(s => s.GPA == gpa);
+                }
             }
 
+            // Trả về view Index với danh sách sinh viên đã lọc
             return View(await students.ToListAsync());
         }
 
-
         // GET: Students/Autocomplete
-        // Hành động này trả về danh sách sinh viên dưới dạng JSON cho tính năng autocomplete
+        // Phương thức để cung cấp các gợi ý tìm kiếm tự động khi người dùng nhập từ khoá
         public async Task<IActionResult> Autocomplete(string term)
         {
-            var students = await _context.Student
-                                 .Include(s => s.Classroom)
-                                 .Where(s => s.Name.Contains(term) || s.Classroom.Name.Contains(term))
-                                 .Select(s => new {
-                                     label = s.Name,
-                                     value = s.Name,
-                                     classroom = s.Classroom.Name
-                                 })
-                                 .ToListAsync();
-            return Json(students);
+            // Tạo một truy vấn ban đầu lấy tất cả sinh viên cùng với lớp học của họ
+            var students = _context.Student.Include(s => s.Classroom).AsQueryable();
+
+            // Nếu từ khoá tìm kiếm không rỗng hoặc không null
+            if (!String.IsNullOrEmpty(term))
+            {
+                // Cố gắng chuyển đổi từ khoá tìm kiếm thành giá trị GPA
+                double gpa;
+                bool isGpa = double.TryParse(term, out gpa);
+
+                // Lọc danh sách sinh viên theo tên sinh viên, tên lớp học hoặc GPA (nếu có)
+                students = students.Where(s => s.Name.Contains(term) ||
+                                               s.Classroom.Name.Contains(term) ||
+                                               (isGpa && s.GPA == gpa));
+            }
+
+            // Chọn các thuộc tính cần thiết cho kết quả gợi ý và chuyển đổi thành JSON
+            var result = await students
+                              .Select(s => new {
+                                  label = s.Name,  // Thuộc tính dùng để hiển thị trong gợi ý
+                                  value = s.Name,  // Giá trị được chọn và gán cho trường nhập liệu
+                                  classroom = s.Classroom.Name,  // Tên lớp học của sinh viên
+                                  gpa = s.GPA  // Điểm trung bình của sinh viên
+                              })
+                              .ToListAsync();
+
+            // Trả về kết quả dưới dạng JSON cho phía client (frontend)
+            return Json(result);
         }
 
 
@@ -83,8 +114,6 @@ namespace SearchFunction.Controllers
         }
 
         // POST: Students/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Name,GPA,ClassroomId")] Student student)
@@ -117,8 +146,6 @@ namespace SearchFunction.Controllers
         }
 
         // POST: Students/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Name,GPA,ClassroomId")] Student student)

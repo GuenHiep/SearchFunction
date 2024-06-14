@@ -1,0 +1,64 @@
+﻿
+<form class="d-flex position-relative" asp-controller="Students" asp-action="Index">
+    <input class="form-control" type="text" name="searchString" id="studentName" oninput="fetchSuggestions(this.value)" autocomplete="off" placeholder="Search...">
+</form>
+<ul id="suggestions" class="list-group mt-2">
+    <!-- Nội dung gợi ý sẽ được thay đổi bằng JavaScript -->
+</ul>
+
+<script>
+    // Hàm để lấy danh sách gợi ý từ server
+    async function fetchSuggestions(query) {
+        // Gửi yêu cầu fetch tới server với từ khóa tìm kiếm
+        const response = await fetch(`/Students/Autocomplete?term=${query}`);
+        // Chuyển đổi phản hồi từ server thành JSON
+        const suggestions = await response.json();
+
+        // Lấy phần tử danh sách gợi ý từ DOM
+        const suggestionsList = document.getElementById('suggestions');
+        // Xóa sạch các gợi ý cũ
+        suggestionsList.innerHTML = '';
+
+        // Duyệt qua từng gợi ý trong danh sách nhận được
+        suggestions.forEach(suggestion => {
+            // Tạo một phần tử <li> mới cho mỗi gợi ý
+            const li = document.createElement('li');
+            li.className = 'list-group-item';
+            // Đặt nội dung của <li> bao gồm tên sinh viên, lớp học và GPA
+            li.textContent = `${suggestion.label} (${suggestion.classroom}, GPA: ${suggestion.gpa})`;
+            // Khi click vào một gợi ý, cập nhật giá trị của input và xóa danh sách gợi ý
+            li.onclick = function () {
+                document.getElementById('studentName').value = suggestion.value;
+                suggestionsList.innerHTML = '';
+            };
+            // Thêm phần tử <li> vào danh sách gợi ý
+            suggestionsList.appendChild(li);
+        });
+    }
+
+    // Lắng nghe sự kiện click trên tài liệu
+    document.addEventListener('click', function (e) {
+        // Lấy phần tử danh sách gợi ý từ DOM
+        const suggestionsList = document.getElementById('suggestions');
+        // Nếu click xảy ra ngoài phạm vi của input 'studentName', xóa danh sách gợi ý
+        if (!document.getElementById('studentName').contains(e.target)) {
+            suggestionsList.innerHTML = '';
+        }
+    });
+</script>
+
+
+<style>
+    #suggestions {
+        width: 100%;
+        z-index: 1000;
+    }
+
+        #suggestions .list-group-item {
+            cursor: pointer;
+        }
+
+            #suggestions .list-group-item:hover {
+                background-color: #f0f0f0;
+            }
+</style>
